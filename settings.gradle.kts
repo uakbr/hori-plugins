@@ -23,11 +23,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-rootProject.name = "external plugins example"
+rootProject.name = "Hori Plugins"
 
-include(":kotlinexample")
-include(":javaexample")
-
+include(":vorkathHelper")
 for (project in rootProject.children) {
     project.apply {
         projectDir = file(name)

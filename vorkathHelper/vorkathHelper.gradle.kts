@@ -27,8 +27,8 @@ import ProjectVersions.openosrsVersion
 
 version = "0.0.1"
 
-project.extra["PluginName"] = "Java example plugin" // This is the name that is used in the external plugin manager panel
-project.extra["PluginDescription"] = "Java example plugin" // This is the description that is used in the external plugin manager panel
+project.extra["PluginName"] = "Vorkath Helper" // This is the name that is used in the external plugin manager panel
+project.extra["PluginDescription"] = "Helps with Vorkath Fight" // This is the description that is used in the external plugin manager panel
 
 dependencies {
     annotationProcessor(Libraries.lombok)
@@ -36,9 +36,9 @@ dependencies {
 
     compileOnly("com.openosrs:runelite-api:$openosrsVersion+")
     compileOnly("com.openosrs:runelite-client:$openosrsVersion+")
+    compileOnly(group = "com.openosrs.externals", name = "iutils", version = "4.8.2+");
 
     compileOnly(Libraries.guice)
-    compileOnly(Libraries.javax)
     compileOnly(Libraries.lombok)
     compileOnly(Libraries.pf4j)
 }
@@ -50,6 +50,10 @@ tasks {
                     "Plugin-Version" to project.version,
                     "Plugin-Id" to nameToId(project.extra["PluginName"] as String),
                     "Plugin-Provider" to project.extra["PluginProvider"],
+                    "Plugin-Dependencies" to
+                        arrayOf(
+                            nameToId("iUtils")
+                        ).joinToString(),
                     "Plugin-Description" to project.extra["PluginDescription"],
                     "Plugin-License" to project.extra["PluginLicense"]
             ))
