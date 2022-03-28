@@ -26,6 +26,8 @@
 rootProject.name = "Hori Plugins"
 
 include(":vorkathHelper")
+include(":vorkathPlayer")
+include(":cannonHelper")
 for (project in rootProject.children) {
     project.apply {
         projectDir = file(name)
