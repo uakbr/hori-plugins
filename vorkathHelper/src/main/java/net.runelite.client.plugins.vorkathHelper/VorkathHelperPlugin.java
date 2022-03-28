@@ -213,16 +213,14 @@ public class VorkathHelperPlugin extends iScript {
 			case ACID_WALK:
 				NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
 				Widget widget = client.getWidget(WidgetInfo.MINIMAP_RUN_ORB);
-				if (widget != null && playerUtils.isRunEnabled() && config.walkMethod().getId() == 2) {
+				if (widget != null && playerUtils.isRunEnabled() && player.isMoving()) {
 					utils.doInvokeMsTime(new LegacyMenuEntry("Toggle Run", "", 1, 57, -1,
-							10485783, false), sleepDelay());
+							10485783, false), 10);
 				}
 
 				if(prayerUtils.isQuickPrayerActive() && (config.walkMethod().getId() != 2 || (config.walkMethod().getId() == 2 && player.isMoving()))){
-					prayerUtils.toggleQuickPrayer(false, 0);
-					return;
+					prayerUtils.toggleQuickPrayer(false, 10);
 				}
-
 
 				if(config.walkMethod().getId() == 1) return;
 				if(config.walkMethod().getId() == 2){
@@ -249,18 +247,11 @@ public class VorkathHelperPlugin extends iScript {
 						log.info("Last Tile: " + lastTile);
 						log.info("Actual length: " + (firstTile.getX() != lastTile.getX() ? Math.abs(firstTile.getX() - lastTile.getX()) : Math.abs(firstTile.getY() - lastTile.getY())));
 
-						/*if((!player.getWorldLocation().equals(firstTile) && !player.getWorldLocation().equals(lastTile) && !acidFreePath.contains(player.getWorldLocation()))
-							|| player.getWorldLocation().equals(lastTile)){
-							walkUtils.sceneWalk(firstTile, 0, sleepDelay());
-							return;
-						}else{
-							walkUtils.sceneWalk(lastTile, 0, sleepDelay());
-							return;
-						}
-						 */
-						if(playerUtils.isRunEnabled() && !player.getWorldLocation().equals(firstTile) && !player.getWorldLocation().equals(lastTile) && player.isMoving()){
+						/*if(playerUtils.isRunEnabled() && !player.getWorldLocation().equals(firstTile) && !player.getWorldLocation().equals(lastTile) && player.isMoving()){
 							playerUtils.enableRun(runOrb.getBounds());
 						}
+
+						 */
 						if(acidFreePath.contains(player.getWorldLocation())){
 							if(player.getWorldLocation().equals(firstTile)){
 								walkUtils.sceneWalk(lastTile, 0, sleepDelay());
