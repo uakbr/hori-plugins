@@ -27,7 +27,7 @@ package net.runelite.client.plugins.vorkathHelper;
 import lombok.Getter;
 import net.runelite.client.config.*;
 
-@ConfigGroup("OliVorkathConfig")
+@ConfigGroup("VorkathAssistantConfig")
 
 public interface VorkathHelperConfig extends Config
 {

@@ -31,7 +31,7 @@ import static net.runelite.api.ObjectID.ACID_POOL_32000;
 @Extension
 @PluginDependency(iUtils.class)
 @PluginDescriptor(
-	name = "Vorkath helper",
+	name = "Vorkath Assistant",
 	description = "Automatic Vorkath",
 	tags = {"Vorkath"}
 )
@@ -138,7 +138,10 @@ public class VorkathHelperPlugin extends iScript {
 		final LocalPoint localLoc = player.getLocalLocation();
 		final WorldPoint worldLoc = player.getWorldLocation();
 
-		if(!isAtVorkath()) return;
+		if(!isAtVorkath()){
+			safeMeleeTiles.clear();
+			return;
+		}
 
 		if(!isAcid()){
 			isAcid = false;
@@ -166,6 +169,11 @@ public class VorkathHelperPlugin extends iScript {
 				LocalPoint dodgeLeft = new LocalPoint(localLoc.getX() - 256, localLoc.getY());
 				LocalPoint dodgeReset = new LocalPoint(6208, 7872);
 
+				if(dodgeFirebomb && !player.getWorldLocation().equals(fireBallPoint)){
+					fireBallPoint = null;
+					dodgeFirebomb = false;
+					return;
+				}
 				if(localLoc.getY() > 7872){
 					walkUtils.sceneWalk(dodgeReset, 0, sleepDelay());
 					dodgeFirebomb = false;
@@ -177,17 +185,17 @@ public class VorkathHelperPlugin extends iScript {
 				} else {
 					walkUtils.sceneWalk(dodgeLeft, 0, sleepDelay());
 				}
-				timeout+=1;
-				dodgeFirebomb = false;
 				break;
 			case KILL_MINION:
 				NPC iceMinion = npcUtils.findNearestNpc(NpcID.ZOMBIFIED_SPAWN_8063);
 
 				if(player.getInteracting() != null && player.getInteracting().getName().equalsIgnoreCase("Vorkath")){
 					walkUtils.sceneWalk(localLoc, 0, sleepDelay());
+					return;
 				}
 				if(prayerUtils.isQuickPrayerActive() && config.enablePrayer()){
 					prayerUtils.toggleQuickPrayer(false, sleepDelay());
+					return;
 				}
 				if(iceMinion != null && player.getInteracting() == null) {
 					attackMinion();
@@ -196,7 +204,16 @@ public class VorkathHelperPlugin extends iScript {
 				break;
 			case ACID_WALK:
 				NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
-				if(playerUtils.isRunEnabled() && runOrb != null) playerUtils.enableRun(runOrb.getBounds());
+				if(playerUtils.isRunEnabled() && runOrb != null && config.walkMethod().getId() != 3) {
+					playerUtils.enableRun(runOrb.getBounds());
+				}
+
+				if(prayerUtils.isQuickPrayerActive() && (config.walkMethod().getId() != 2 || (config.walkMethod().getId() == 2 && player.isMoving()))){
+					prayerUtils.toggleQuickPrayer(false, sleepDelay());
+					//return;
+				}
+
+
 				if(config.walkMethod().getId() == 1) return;
 				if(config.walkMethod().getId() == 2){
 					if(!acidSpots.isEmpty()){
@@ -236,7 +253,7 @@ public class VorkathHelperPlugin extends iScript {
 						}
 					}
 				}
-				else{
+				else {
 					Collections.sort(safeMeleeTiles, Comparator.comparingInt(o -> o.distanceTo(player.getWorldLocation())));
 
 					if (safeTile == null) {
@@ -249,7 +266,6 @@ public class VorkathHelperPlugin extends iScript {
 							}
 						}
 					}
-					if(prayerUtils.isQuickPrayerActive()) prayerUtils.toggleQuickPrayer(false, 0);
 
 					if(safeTile != null){
 						if(player.getWorldLocation().equals(safeTile)){
@@ -449,6 +465,7 @@ public class VorkathHelperPlugin extends iScript {
 	 */
 	public void createSafetiles(){
 		if(isAtVorkath()){
+			if(safeMeleeTiles.size() > 8) safeMeleeTiles.clear();
 			LocalPoint southWest = config.walkMethod().getId() == 3 ? new LocalPoint(5824, 7872) : new LocalPoint(5824, 7104);
 			WorldPoint base = WorldPoint.fromLocal(client, southWest);
 			for(int i = 0; i < 7; i++){

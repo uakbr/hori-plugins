@@ -25,9 +25,9 @@ import ProjectVersions.openosrsVersion
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-version = "0.0.3"
+version = "0.0.4"
 
-project.extra["PluginName"] = "Vorkath Helper" // This is the name that is used in the external plugin manager panel
+project.extra["PluginName"] = "Vorkath Assistant" // This is the name that is used in the external plugin manager panel
 project.extra["PluginDescription"] = "Helps with Vorkath Fight" // This is the description that is used in the external plugin manager panel
 
 dependencies {
