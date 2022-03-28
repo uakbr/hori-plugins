@@ -212,14 +212,16 @@ public class VorkathHelperPlugin extends iScript {
 				break;
 			case ACID_WALK:
 				NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
-				Widget widget = client.getWidget(WidgetInfo.MINIMAP_RUN_ORB);
-				if (widget != null && playerUtils.isRunEnabled() && player.isMoving()) {
-					utils.doInvokeMsTime(new LegacyMenuEntry("Toggle Run", "", 1, 57, -1,
-							10485783, false), 10);
+				Widget runWidget = client.getWidget(WidgetInfo.MINIMAP_RUN_ORB);
+				Widget prayerWidget = client.getWidget(WidgetInfo.MINIMAP_QUICK_PRAYER_ORB);
+				if (runWidget != null && playerUtils.isRunEnabled() && player.isMoving()) {
+					utils.doInvokeMsTime(new LegacyMenuEntry("Toggle Run", "", 1, MenuAction.CC_OP, -1,
+							10485783, false), 0);
 				}
 
-				if(prayerUtils.isQuickPrayerActive() && (config.walkMethod().getId() != 2 || (config.walkMethod().getId() == 2 && player.isMoving()))){
-					prayerUtils.toggleQuickPrayer(false, 10);
+				if(prayerWidget != null && prayerUtils.isQuickPrayerActive() && (config.walkMethod().getId() != 2 || (config.walkMethod().getId() == 2 && player.isMoving()))){
+					utils.doInvokeMsTime(new LegacyMenuEntry("Deactivate", "", 1, MenuAction.CC_OP, -1,
+							10485775, false), 0);
 				}
 
 				if(config.walkMethod().getId() == 1) return;
