@@ -84,6 +84,7 @@ public class VorkathHelperPlugin extends iScript {
 	private List<WorldPoint> safeMeleeTiles;
 	private boolean isAcid;
 	private boolean isMinion;
+	private boolean firstWalk;
 
 	private final Set<Integer> DIAMOND_SET = Set.of(ItemID.DIAMOND_DRAGON_BOLTS_E, ItemID.DIAMOND_BOLTS_E);
 	private final Set<Integer> RUBY_SET = Set.of(ItemID.RUBY_DRAGON_BOLTS_E, ItemID.RUBY_BOLTS_E);
@@ -95,6 +96,7 @@ public class VorkathHelperPlugin extends iScript {
 		timeout = 0;
 		dodgeFirebomb = false;
 		fireBallPoint = null;
+		firstWalk = true;
 	}
 
 	@Provides
@@ -142,6 +144,11 @@ public class VorkathHelperPlugin extends iScript {
 			safeMeleeTiles.clear();
 			return;
 		}
+		if(isVorkathAsleep() || !isAtVorkath()) {
+			isMinion = false;
+			isAcid = false;
+			dodgeFirebomb = false;
+		}
 
 		if(!isAcid()){
 			isAcid = false;
@@ -165,8 +172,9 @@ public class VorkathHelperPlugin extends iScript {
 				if(!playerUtils.isRunEnabled()) playerUtils.enableRun(runOrb.getBounds());
 				break;
 			case DODGE_BOMB:
-				LocalPoint dodgeRight = new LocalPoint(localLoc.getX() + 256, localLoc.getY()); //Local point is 1/128th of a tile. 256 = 2 tiles
-				LocalPoint dodgeLeft = new LocalPoint(localLoc.getX() - 256, localLoc.getY());
+				LocalPoint bomb = LocalPoint.fromWorld(client, fireBallPoint);
+				LocalPoint dodgeRight = new LocalPoint(bomb.getX() + 256, bomb.getY()); //Local point is 1/128th of a tile. 256 = 2 tiles
+				LocalPoint dodgeLeft = new LocalPoint(bomb.getX() - 256, bomb.getY());
 				LocalPoint dodgeReset = new LocalPoint(6208, 7872);
 
 				if(dodgeFirebomb && !player.getWorldLocation().equals(fireBallPoint)){
@@ -204,13 +212,15 @@ public class VorkathHelperPlugin extends iScript {
 				break;
 			case ACID_WALK:
 				NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
-				if(playerUtils.isRunEnabled() && runOrb != null && config.walkMethod().getId() != 3) {
-					playerUtils.enableRun(runOrb.getBounds());
+				Widget widget = client.getWidget(WidgetInfo.MINIMAP_RUN_ORB);
+				if (widget != null && playerUtils.isRunEnabled() && config.walkMethod().getId() == 2) {
+					utils.doInvokeMsTime(new LegacyMenuEntry("Toggle Run", "", 1, 57, -1,
+							10485783, false), sleepDelay());
 				}
 
 				if(prayerUtils.isQuickPrayerActive() && (config.walkMethod().getId() != 2 || (config.walkMethod().getId() == 2 && player.isMoving()))){
-					prayerUtils.toggleQuickPrayer(false, sleepDelay());
-					//return;
+					prayerUtils.toggleQuickPrayer(false, 0);
+					return;
 				}
 
 
@@ -218,11 +228,8 @@ public class VorkathHelperPlugin extends iScript {
 				if(config.walkMethod().getId() == 2){
 					if(!acidSpots.isEmpty()){
 						if(acidFreePath.isEmpty()){
-							calculateAcidFreePath(config.acidFreePathLength());
+							calculateAcidFreePath();
 						}
-
-						log.info("Acid free path size: " + acidFreePath.size());
-						log.info("Config amount: " + config.acidFreePathLength());
 
 						WorldPoint firstTile;
 						WorldPoint lastTile;
@@ -233,7 +240,7 @@ public class VorkathHelperPlugin extends iScript {
 						}
 
 						if(acidFreePath.size() > config.acidFreePathLength()){
-							lastTile = acidFreePath.get(config.acidFreePathLength());
+							lastTile = acidFreePath.get(config.acidFreePathLength() -1);
 						}else{
 							lastTile = acidFreePath.get(acidFreePath.size() - 1);
 						}
@@ -242,15 +249,29 @@ public class VorkathHelperPlugin extends iScript {
 						log.info("Last Tile: " + lastTile);
 						log.info("Actual length: " + (firstTile.getX() != lastTile.getX() ? Math.abs(firstTile.getX() - lastTile.getX()) : Math.abs(firstTile.getY() - lastTile.getY())));
 
-						if((!player.getWorldLocation().equals(firstTile) && !player.getWorldLocation().equals(lastTile) && !acidFreePath.contains(player.getWorldLocation()))
+						/*if((!player.getWorldLocation().equals(firstTile) && !player.getWorldLocation().equals(lastTile) && !acidFreePath.contains(player.getWorldLocation()))
 							|| player.getWorldLocation().equals(lastTile)){
 							walkUtils.sceneWalk(firstTile, 0, sleepDelay());
 							return;
-						}
-						if(player.getWorldLocation().equals(firstTile)){
+						}else{
 							walkUtils.sceneWalk(lastTile, 0, sleepDelay());
 							return;
 						}
+						 */
+						if(playerUtils.isRunEnabled() && !player.getWorldLocation().equals(firstTile) && !player.getWorldLocation().equals(lastTile) && player.isMoving()){
+							playerUtils.enableRun(runOrb.getBounds());
+						}
+						if(acidFreePath.contains(player.getWorldLocation())){
+							if(player.getWorldLocation().equals(firstTile)){
+								walkUtils.sceneWalk(lastTile, 0, sleepDelay());
+							}
+							if(player.getWorldLocation().equals(lastTile)){
+								walkUtils.sceneWalk(firstTile, 0, sleepDelay());
+							}
+						}else if(!player.isMoving()){
+							walkUtils.sceneWalk(lastTile, 0, 0);
+						}
+
 					}
 				}
 				else {
@@ -466,7 +487,7 @@ public class VorkathHelperPlugin extends iScript {
 	public void createSafetiles(){
 		if(isAtVorkath()){
 			if(safeMeleeTiles.size() > 8) safeMeleeTiles.clear();
-			LocalPoint southWest = config.walkMethod().getId() == 3 ? new LocalPoint(5824, 7872) : new LocalPoint(5824, 7104);
+			LocalPoint southWest = config.walkMethod().getId() == 3 ? new LocalPoint(5824, 7872) : config.walkMethod().getId() == 4 ? new LocalPoint(5824, 7104) : new LocalPoint(5824, 7360);
 			WorldPoint base = WorldPoint.fromLocal(client, southWest);
 			for(int i = 0; i < 7; i++){
 				safeMeleeTiles.add(new WorldPoint(base.getX() + i, base.getY(), base.getPlane()));
@@ -495,15 +516,120 @@ public class VorkathHelperPlugin extends iScript {
 		if (!acidSpots.contains(worldPoint))
 			acidSpots.add(worldPoint);
 	}
+	private void calculateAcidFreePath()
+	{
+		acidFreePath.clear();
 
-	private void calculateAcidFreePath(int size) {
+		Player player = client.getLocalPlayer();
+		NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
+
+		if (vorkath == null)
+		{
+			return;
+		}
+
+		final int[][][] directions = {
+				{
+						{0, 1}, {0, -1} // Positive and negative Y
+				},
+				{
+						{1, 0}, {-1, 0} // Positive and negative X
+				}
+		};
+
+		List<WorldPoint> bestPath = new ArrayList<>();
+		double bestClicksRequired = 99;
+
+		final WorldPoint playerLoc = client.getLocalPlayer().getWorldLocation();
+		final WorldPoint vorkLoc = vorkath.getWorldLocation();
+		final int maxX = vorkLoc.getX() + 14;
+		final int minX = vorkLoc.getX() - 8;
+		final int maxY = vorkLoc.getY() - 1;
+		final int minY = vorkLoc.getY() - 8;
+
+		// Attempt to search an acid free path, beginning at a location
+		// adjacent to the player's location (including diagonals)
+		for (int x = -1; x < 2; x++)
+		{
+			for (int y = -1; y < 2; y++)
+			{
+				final WorldPoint baseLocation = new WorldPoint(playerLoc.getX() + x,
+						playerLoc.getY() + y, playerLoc.getPlane());
+
+				if (acidSpots.contains(baseLocation) || baseLocation.getY() < minY || baseLocation.getY() > maxY)
+				{
+					continue;
+				}
+
+				// Search in X and Y direction
+				for (int d = 0; d < directions.length; d++)
+				{
+					// Calculate the clicks required to start walking on the path
+					double currentClicksRequired = Math.abs(x) + Math.abs(y);
+					if (currentClicksRequired < 2)
+					{
+						currentClicksRequired += Math.abs(y * directions[d][0][0]) + Math.abs(x * directions[d][0][1]);
+					}
+					if (d == 0)
+					{
+						// Prioritize a path in the X direction (sideways)
+						currentClicksRequired += 0.5;
+					}
+
+					List<WorldPoint> currentPath = new ArrayList<>();
+					currentPath.add(baseLocation);
+
+					// Positive X (first iteration) or positive Y (second iteration)
+					for (int i = 1; i < 25; i++)
+					{
+						final WorldPoint testingLocation = new WorldPoint(baseLocation.getX() + i * directions[d][0][0],
+								baseLocation.getY() + i * directions[d][0][1], baseLocation.getPlane());
+
+						if (acidSpots.contains(testingLocation) || testingLocation.getY() < minY || testingLocation.getY() > maxY
+								|| testingLocation.getX() < minX || testingLocation.getX() > maxX)
+						{
+							break;
+						}
+
+						currentPath.add(testingLocation);
+					}
+
+					// Negative X (first iteration) or positive Y (second iteration)
+					for (int i = 1; i < 25; i++)
+					{
+						final WorldPoint testingLocation = new WorldPoint(baseLocation.getX() + i * directions[d][1][0],
+								baseLocation.getY() + i * directions[d][1][1], baseLocation.getPlane());
+
+						if (acidSpots.contains(testingLocation) || testingLocation.getY() < minY || testingLocation.getY() > maxY
+								|| testingLocation.getX() < minX || testingLocation.getX() > maxX)
+						{
+							break;
+						}
+
+						currentPath.add(testingLocation);
+					}
+
+					if (currentPath.size() >= config.acidFreePathLength() && currentClicksRequired < bestClicksRequired
+							|| (currentClicksRequired == bestClicksRequired && currentPath.size() > bestPath.size()))
+					{
+						bestPath = currentPath;
+						bestClicksRequired = currentClicksRequired;
+					}
+				}
+			}
+		}
+
+		if (bestClicksRequired != 99)
+		{
+			acidFreePath = bestPath;
+		}
+	}
+	/*Iprivate void calculateAcidFreePath(int size) {
 
 		Player player = client.getLocalPlayer();
 		NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
 
 		if(player == null || vorkath == null) return;
-
-		acidFreePath.clear();
 
 		int[][][] array = { { { 0, 1 }, { 0, -1 } }, { { 1, 0 }, { -1, 0 } } };
 		ArrayList<WorldPoint> bestPath = new ArrayList<>();
@@ -574,6 +700,8 @@ public class VorkathHelperPlugin extends iScript {
 		if (bestClicksRequired != 99.0D)
 			acidFreePath = bestPath;
 	}
+
+	 */
 
 	public void equipDiamond() {
 		if (!playerUtils.isItemEquipped(DIAMOND_SET) && invUtils.containsItem(DIAMOND_SET)) {

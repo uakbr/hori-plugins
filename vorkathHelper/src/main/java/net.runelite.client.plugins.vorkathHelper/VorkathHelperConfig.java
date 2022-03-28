@@ -210,6 +210,8 @@ public interface VorkathHelperConfig extends Config
     @ConfigItem(keyName = "walkMethod", name = "Walk Method", description = "Acid phase method", position = 3, section = vorkathConfig)
     default walkMethod walkMethod() { return walkMethod.NONE; }
 
+
+    @Range(min = 4, max = 7)
     @ConfigItem(
             keyName = "acidFreePathMinLength",
             name = "Acid walk length",
@@ -262,7 +264,8 @@ public interface VorkathHelperConfig extends Config
         NONE(1),
         WALK_ACID(2),
         WOOX_ACID(3),
-        WOOX_ACID_RANGED(4);
+        WOOX_ACID_CROSSBOW(4),
+        WOOX_ACID_BLOWPIPE(5);
 
         @Getter
         private final int id;
