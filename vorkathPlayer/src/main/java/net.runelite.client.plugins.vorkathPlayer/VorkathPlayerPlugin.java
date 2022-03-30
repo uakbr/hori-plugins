@@ -203,19 +203,18 @@ public class VorkathPlayerPlugin extends iScript {
 		if(client.getGameState() != GameState.LOGGED_IN || !startPlugin || client.getLocalPlayer() == null) return;
 
 		if(shouldLoot()){
-			if(invUtils.isFull() && config.eatLoot()){
-				if(getFood() != null){
+			if(invUtils.isFull()){
+				if(invUtils.containsItem(ItemID.VIAL)){
+					useItem(getWidgetItem(Set.of(ItemID.VIAL)), MenuAction.ITEM_FIFTH_OPTION);
+				}
+				if(config.eatLoot() && getFood() != null){
 					useItem(getFood(), MenuAction.ITEM_FIRST_OPTION);
-					game.tick();
 				}
 			}else{
 				log.info("" + getLoot().name());
 				if(getLoot() != null && !playerUtils.isMoving()) getLoot().interact("Take");
 			}
 		}
-
-
-		game.tick(1);
 	}
 
 	@Subscribe
@@ -436,15 +435,15 @@ public class VorkathPlayerPlugin extends iScript {
 						return;
 					}
 					if(playerLocal.getY() > 7872){
-						walkUtils.sceneWalk(dodgeReset, 0, sleepDelay());
+						walkUtils.sceneWalk(dodgeReset, 0, 0);
 						isFireball = false;
 						timeout+=2;
 						return;
 					}
 					if (playerLocal.getX() < 6208) {
-						walkUtils.sceneWalk(dodgeRight, 0, sleepDelay());
+						walkUtils.sceneWalk(dodgeRight, 0, 0);
 					} else {
-						walkUtils.sceneWalk(dodgeLeft, 0, sleepDelay());
+						walkUtils.sceneWalk(dodgeLeft, 0, 0);
 					}
 					break;
 				case RETALIATE:
@@ -827,10 +826,10 @@ public class VorkathPlayerPlugin extends iScript {
 			if(!player.isMoving() && !shouldLoot() && isVorkathAsleep() && !shouldDrinkRestore() && !shouldDrinkBoost() && !shouldDrinkAntifire() && !shouldDrinkVenom() && hasFoodForKill() && (game.modifiedLevel(Skill.HITPOINTS) > (game.baseLevel(Skill.HITPOINTS) - 20)))
 				return POKE_VORKATH;
 
-			if(shouldLoot() && (!invUtils.isFull() || (invUtils.isFull() && getFood() != null)))
+			if(shouldLoot() && (!invUtils.isFull() || (invUtils.isFull() && (getFood() != null && invUtils.containsItem(ItemID.VIAL)))))
 				return LOOT_VORKATH;
 
-			if((shouldLoot() && (invUtils.isFull() && (getFood() == null || !config.eatLoot()))) || (vorkathAlive != null && getFood() == null) || (!shouldLoot && (prayerUtils.getPoints() == 0 && getWidgetItem(config.prayer().getIds()) == null) || (game.modifiedLevel(Skill.HITPOINTS) <=5) || (shouldDrinkVenom() && getWidgetItem(config.antivenom().getIds()) == null) || (shouldDrinkAntifire() && getWidgetItem(config.antifire().getIds()) == null)) || (!hasFoodForKill() && isVorkathAsleep()))
+			if((shouldLoot() && (invUtils.isFull() && invUtils.containsItem(ItemID.VIAL) && getFood() == null || !config.eatLoot())) || (vorkathAlive != null && getFood() == null) || (!shouldLoot() && (prayerUtils.getPoints() == 0 && getWidgetItem(config.prayer().getIds()) == null) || (game.modifiedLevel(Skill.HITPOINTS) <=5) || (shouldDrinkVenom() && getWidgetItem(config.antivenom().getIds()) == null) || (shouldDrinkAntifire() && getWidgetItem(config.antifire().getIds()) == null)) || (!hasFoodForKill() && isVorkathAsleep()))
 				return TELEPORT_TO_POH;
 
 			if(!playerUtils.isRunEnabled() && !isAcid) return TOGGLE_RUN;
@@ -934,31 +933,15 @@ public class VorkathPlayerPlugin extends iScript {
 
 		if(getLoot() != null && getLoot().id() == ItemID.SUPERIOR_DRAGON_BONES && invUtils.isFull() && config.lootBonesIfRoom() && hasFoodForKill()) return false;
 
-		return getLoot() != null && (isVorkathAsleep() || (vork != null && vork.isDead()));
+		return getLoot() != null && (isVorkathAsleep());
 	}
+
 	public iGroundItem getLoot(){
 		iNPC vork = game.npcs().withId(NpcID.VORKATH_8061).first();
 
 		List<iGroundItem> loot = game.groundItems().filter(a -> {
 			int value = game.getFromClientThread(() -> utils.getItemPrice(a.id(), true)) * a.quantity();
 			return value >= config.lootValue() || (a.id() == ItemID.BLUE_DRAGONHIDE && a.quantity() > 3) || (config.lootBones() && a.id() == ItemID.SUPERIOR_DRAGON_BONES) || (config.lootHide() && a.id() == ItemID.BLUE_DRAGONHIDE);
-		}).sorted(Comparator.comparingInt(b -> {
-			return game.getFromClientThread(() -> utils.getItemPrice(b.id(), true) * b.quantity());
-		})).collect(Collectors.toList());
-
-		Collections.reverse(loot);
-
-		if(!loot.isEmpty()) return loot.get(0);
-
-		return null;
-	}
-
-	public iGroundItem getLoot1(){
-		List<iGroundItem> loot = game.groundItems().filter(a -> {
-			var value = game.getFromClientThread(() -> utils.getItemPrice(a.id(), true));
-			log.info("" + value);
-			return value >= config.lootValue();
-			//return (a.id() == ItemID.BLUE_DRAGONHIDE && a.quantity() > 3) || a.id() != ItemID.BLUE_DRAGONHIDE;
 		}).sorted(Comparator.comparingInt(b -> {
 			return game.getFromClientThread(() -> utils.getItemPrice(b.id(), true) * b.quantity());
 		})).collect(Collectors.toList());
@@ -1138,9 +1121,9 @@ public class VorkathPlayerPlugin extends iScript {
 			targetMenu = new LegacyMenuEntry("", "", item.getId(), action, item.getIndex(),
 					WidgetInfo.INVENTORY.getId(), false);
 			if (config.invokes()) {
-				utils.doInvokeMsTime(targetMenu, sleepDelay());
+				utils.doInvokeMsTime(targetMenu, 0);
 			} else {
-				utils.doActionMsTime(targetMenu, item.getCanvasBounds(), sleepDelay());
+				utils.doActionMsTime(targetMenu, item.getCanvasBounds(), 0);
 			}
 		}
 	}

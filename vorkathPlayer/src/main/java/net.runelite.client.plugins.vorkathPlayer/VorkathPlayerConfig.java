@@ -382,7 +382,7 @@ public interface VorkathPlayerConfig extends Config {
 
     @ConfigItem(keyName = "lootUnnotedHide", name = "Loot Un-noted dragonhide", description = "", position = 994, section = lootSection)
     default boolean lootHide() {
-        return true;
+        return false;
     }
 
     @ConfigItem(keyName = "eatLoot", name = "Eat food to loot", description = "", position = 995, section = lootSection)
@@ -416,7 +416,7 @@ public interface VorkathPlayerConfig extends Config {
     }
 
     @ConfigItem(keyName = "walkMethod", name = "Walk Method", description = "Acid phase method", position = 1002)
-    default walkMethod walkMethod() { return walkMethod.WOOX_ACID; }
+    default walkMethod walkMethod() { return walkMethod.WOOX_ACID_MELEE; }
 
     enum Mainhand {
         DRAGON_HUNTER_LANCE(ItemID.DRAGON_HUNTER_LANCE, 1),
@@ -609,7 +609,7 @@ public interface VorkathPlayerConfig extends Config {
     enum walkMethod {
         NONE(1),
         WALK_ACID(2),
-        WOOX_ACID(3),
+        WOOX_ACID_MELEE(3),
         WOOX_ACID_RANGED(4),
         WOOX_ACID_BLOWPIPE(5);
 
