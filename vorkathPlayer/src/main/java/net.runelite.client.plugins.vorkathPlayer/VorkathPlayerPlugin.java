@@ -930,7 +930,7 @@ public class VorkathPlayerPlugin extends iScript {
 	public boolean shouldLoot(){
 		iNPC vork = game.npcs().withId(NpcID.VORKATH_8061).first();
 
-		if(getLoot() != null && getLoot().id() == ItemID.SUPERIOR_DRAGON_BONES && invUtils.isFull()) return false;
+		//if(getLoot() != null && getLoot().id() == ItemID.SUPERIOR_DRAGON_BONES && invUtils.isFull()) return false;
 
 		return getLoot() != null && (isVorkathAsleep() || (vork != null && vork.isDead()));
 	}
