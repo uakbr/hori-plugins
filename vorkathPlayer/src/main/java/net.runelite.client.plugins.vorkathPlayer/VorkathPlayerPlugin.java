@@ -214,11 +214,13 @@ public class VorkathPlayerPlugin extends iScript {
 			}
 		}
 
+
 		game.tick(1);
 	}
 
 	@Subscribe
 	public void onGameTick(GameTick event){
+
 		if(client.getGameState() != GameState.LOGGED_IN || !startPlugin || client.getLocalPlayer() == null) return;
 
 		final Widget runWidget = client.getWidget(WidgetInfo.MINIMAP_RUN_ORB);
@@ -930,7 +932,7 @@ public class VorkathPlayerPlugin extends iScript {
 	public boolean shouldLoot(){
 		iNPC vork = game.npcs().withId(NpcID.VORKATH_8061).first();
 
-		//if(getLoot() != null && getLoot().id() == ItemID.SUPERIOR_DRAGON_BONES && invUtils.isFull()) return false;
+		if(getLoot() != null && getLoot().id() == ItemID.SUPERIOR_DRAGON_BONES && invUtils.isFull() && config.lootBonesIfRoom() && hasFoodForKill()) return false;
 
 		return getLoot() != null && (isVorkathAsleep() || (vork != null && vork.isDead()));
 	}
@@ -938,8 +940,24 @@ public class VorkathPlayerPlugin extends iScript {
 		iNPC vork = game.npcs().withId(NpcID.VORKATH_8061).first();
 
 		List<iGroundItem> loot = game.groundItems().filter(a -> {
-			var value = game.getFromClientThread(() -> utils.getItemPrice(a.id(), true));
+			int value = game.getFromClientThread(() -> utils.getItemPrice(a.id(), true)) * a.quantity();
 			return value >= config.lootValue() || (a.id() == ItemID.BLUE_DRAGONHIDE && a.quantity() > 3) || (config.lootBones() && a.id() == ItemID.SUPERIOR_DRAGON_BONES) || (config.lootHide() && a.id() == ItemID.BLUE_DRAGONHIDE);
+		}).sorted(Comparator.comparingInt(b -> {
+			return game.getFromClientThread(() -> utils.getItemPrice(b.id(), true) * b.quantity());
+		})).collect(Collectors.toList());
+
+		Collections.reverse(loot);
+
+		if(!loot.isEmpty()) return loot.get(0);
+
+		return null;
+	}
+
+	public iGroundItem getLoot1(){
+		List<iGroundItem> loot = game.groundItems().filter(a -> {
+			var value = game.getFromClientThread(() -> utils.getItemPrice(a.id(), true));
+			log.info("" + value);
+			return value >= config.lootValue();
 			//return (a.id() == ItemID.BLUE_DRAGONHIDE && a.quantity() > 3) || a.id() != ItemID.BLUE_DRAGONHIDE;
 		}).sorted(Comparator.comparingInt(b -> {
 			return game.getFromClientThread(() -> utils.getItemPrice(b.id(), true) * b.quantity());

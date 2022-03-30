@@ -375,42 +375,47 @@ public interface VorkathPlayerConfig extends Config {
         return true;
     }
 
-    @ConfigItem(keyName = "lootUnnotedHide", name = "Loot Un-noted dragonhide", description = "", position = 993, section = lootSection)
+    @ConfigItem(keyName = "lootBonesIfRoom", name = "Loot Superior dragon bones only if you have room", description = "", hidden = true, unhide = "lootBones", position = 993, section = lootSection)
+    default boolean lootBonesIfRoom() {
+        return false;
+    }
+
+    @ConfigItem(keyName = "lootUnnotedHide", name = "Loot Un-noted dragonhide", description = "", position = 994, section = lootSection)
     default boolean lootHide() {
         return true;
     }
 
-    @ConfigItem(keyName = "eatLoot", name = "Eat food to loot", description = "", position = 994, section = lootSection)
+    @ConfigItem(keyName = "eatLoot", name = "Eat food to loot", description = "", position = 995, section = lootSection)
     default boolean eatLoot() {
         return true;
     }
 
-    @ConfigItem(keyName = "lootValue", name = "Item value to loot", description = "Loot items over this value", position = 995, section = lootSection)
+    @ConfigItem(keyName = "lootValue", name = "Item value to loot", description = "Loot items over this value", position = 996, section = lootSection)
     default int lootValue() {
         return 25000;
     }
 
-    @ConfigItem(keyName = "includedItems", name = "Included items", description = "Full or partial names of items to loot regardless of value<br>Seperate with a comma", position = 996, section = lootSection)
+    @ConfigItem(keyName = "includedItems", name = "Included items", description = "Full or partial names of items to loot regardless of value<br>Seperate with a comma", position = 997, section = lootSection)
     default String includedItems() {
         return "rune longsword";
     }
 
-    @ConfigItem(keyName = "excludedItems", name = "Excluded items", description = "Full or partial names of items to NOT loot<br>Seperate with a comma", position = 997, section = lootSection)
+    @ConfigItem(keyName = "excludedItems", name = "Excluded items", description = "Full or partial names of items to NOT loot<br>Seperate with a comma", position = 998, section = lootSection)
     default String excludedItems() {
         return "ruby bolt,diamond bolt,emerald bolt,dragonstone bolt";
     }
 
-    @ConfigItem(keyName = "invokes", name = "Use invokes (use with caution)", description = "Use at your own risk :)", position = 998)
+    @ConfigItem(keyName = "invokes", name = "Use invokes (use with caution)", description = "Use at your own risk :)", position = 1000)
     default boolean invokes() {
         return false;
     }
 
-    @ConfigItem(keyName = "debug", name = "Debug Messages", description = "", position = 1000)
+    @ConfigItem(keyName = "debug", name = "Debug Messages", description = "", position = 1001)
     default boolean debug() {
         return false;
     }
 
-    @ConfigItem(keyName = "walkMethod", name = "Walk Method", description = "Acid phase method", position = 1001)
+    @ConfigItem(keyName = "walkMethod", name = "Walk Method", description = "Acid phase method", position = 1002)
     default walkMethod walkMethod() { return walkMethod.WOOX_ACID; }
 
     enum Mainhand {
