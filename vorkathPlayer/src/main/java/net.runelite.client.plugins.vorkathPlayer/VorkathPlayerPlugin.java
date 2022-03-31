@@ -97,7 +97,6 @@ public class VorkathPlayerPlugin extends iScript {
 	private boolean hasSpecced;
 	private boolean shouldLoot;
 
-
 	private WorldArea kickedOffIsland;
 	private WorldArea afterBoat;
 	private WorldPoint fireballPoint;
@@ -334,6 +333,10 @@ public class VorkathPlayerPlugin extends iScript {
 								10485775, false), 0);
 					}
 
+					if(config.eatWoox() && shouldEat()){
+						useItem(getFood(), MenuAction.ITEM_FIRST_OPTION);
+					}
+
 					if(config.walkMethod().getId() == 1) return;
 					if(config.walkMethod().getId() == 2){
 						if(!acidSpots.isEmpty()){
@@ -563,37 +566,6 @@ public class VorkathPlayerPlugin extends iScript {
 									return;
 								}
 							}
-
-							/*if(client.getItemComposition(id).getName().contains("bolt") && !){
-								if(!invUtils.containsItemAmount(id, inventoryItems.get(id) - invUtils.getItemCount(id, true), true, false)){
-									bankUtils.withdrawItemAmount(id, inventoryItems.get(id) - invUtils.getItemCount(id, true));
-								}
-								timeout += inventoryItems.get(id) == 1 ? 0 : 3;
-								return;
-							}
-							else{
-								if (!invUtils.containsItemAmount(id, inventoryItems.get(id), false, true)) {
-									if(invUtils.getItemCount(id, false) > inventoryItems.get(id)) {
-										bankUtils.depositAll();
-										return;
-									}
-									bankUtils.withdrawItemAmount(id, (inventoryItems.get(id) - invUtils.getItemCount(id, false)));
-									timeout += inventoryItems.get(id) == 1 ? 0 : 3;
-									return;
-								}
-							}
-
-							 */
-							/*if (!invUtils.containsItemAmount(id, inventoryItems.get(id), false, true)) {
-								if(invUtils.getItemCount(id, false) > inventoryItems.get(id)) {
-									bankUtils.depositAll();
-									return;
-								}
-								bankUtils.withdrawItemAmount(id, (inventoryItems.get(id) - invUtils.getItemCount(id, false)));
-								timeout += inventoryItems.get(id) == 1 ? 0 : 3;
-								return;
-							}
-							 */
 						}
 					}else{
 						openBank();
@@ -680,8 +652,18 @@ public class VorkathPlayerPlugin extends iScript {
 	}
 
 	@Subscribe
-	private void onChatMessage(ChatMessage message){
+	private void onChatMessage(ChatMessage ev){
+		if(!startPlugin || ev.getType() != ChatMessageType.GAMEMESSAGE) return;
 
+		String message = ev.getMessage();
+
+		String deathMessage = "Oh dear, you are dead!";
+
+		if(message.equalsIgnoreCase(deathMessage)){
+			timeout+=2;
+			game.sendGameMessage("You suck omegal0l");
+			stop();
+		}
 	}
 
 	@Subscribe
@@ -772,24 +754,6 @@ public class VorkathPlayerPlugin extends iScript {
 		}
 	}
 
-	@Subscribe
-	private void onItemSpawned(ItemSpawned ev){
-	}
-
-	@Subscribe
-	private void onItemDespawned(ItemDespawned ev){
-	}
-
-	/*public boolean isShouldLoot(){
-		return !items.isEmpty();
-	}
-
-	public boolean isLootable(TileItem item, int amount){
-		int value = game.getFromClientThread(() -> utils.getItemPrice(item.getId(), true)) * amount;
-		return value >= config.lootValue() || (item.getId() == ItemID.BLUE_DRAGONHIDE && amount > 3) || (config.lootBones() && item.getId() == ItemID.SUPERIOR_DRAGON_BONES) || (config.lootHide() && item.getId() == ItemID.BLUE_DRAGONHIDE);
-	}
-	 */
-
 
 	/* Functions below */
 
@@ -809,7 +773,7 @@ public class VorkathPlayerPlugin extends iScript {
 				if (shouldDrinkRestore()) return DRINK_RESTORE;
 			}
 
-			if(shouldEat()) return EAT_FOOD;
+			if(shouldEat() && !isAcid() && !isFireball) return EAT_FOOD;
 
 			if((vorkathAlive != null || isWakingUp())
 					&& !isAcid
@@ -886,7 +850,7 @@ public class VorkathPlayerPlugin extends iScript {
 					&& !isWakingUp())
 				return RETALIATE;
 
-			if(!player.isMoving() && !shouldLoot() && isVorkathAsleep() && !shouldDrinkRestore() && !shouldDrinkBoost() && !shouldDrinkAntifire() && !shouldDrinkVenom() && hasFoodForKill() && (game.modifiedLevel(Skill.HITPOINTS) > (game.baseLevel(Skill.HITPOINTS) - 20)))
+			if(!player.isMoving() && !shouldLoot() && isVorkathAsleep() && !shouldDrinkRestore() && !shouldDrinkBoost() && !shouldDrinkAntifire() && !shouldDrinkVenom() && hasFoodForKill() && (game.modifiedLevel(Skill.HITPOINTS) >= (game.baseLevel(Skill.HITPOINTS) - 20)))
 				return POKE_VORKATH;
 
 			if(shouldLoot()
@@ -966,7 +930,7 @@ public class VorkathPlayerPlugin extends iScript {
 	}
 
 	public boolean shouldEat(){
-		return (game.modifiedLevel(Skill.HITPOINTS) <= config.eatAt() && getFood() != null) || (isAtVorkath() && isVorkathAsleep() && (game.modifiedLevel(Skill.HITPOINTS) < game.baseLevel(Skill.HITPOINTS) - 20) && getFood() != null);
+		return (game.modifiedLevel(Skill.HITPOINTS) <= config.eatAt() && getFood() != null) || (isAtVorkath() && isVorkathAsleep() && (game.modifiedLevel(Skill.HITPOINTS) <= game.baseLevel(Skill.HITPOINTS) - 20) && getFood() != null);
 	}
 
 	public boolean shouldDrinkAntifire(){
