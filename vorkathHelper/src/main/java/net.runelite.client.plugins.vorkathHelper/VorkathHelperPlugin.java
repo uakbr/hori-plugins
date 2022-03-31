@@ -491,7 +491,7 @@ public class VorkathHelperPlugin extends iScript {
 	}
 
 	/*
-	Taken from xKylees vorkath plugin with consent provided
+	Taken from xKylees vorkath plugin
 	https://github.com/xKylee/plugins-source/blob/master/vorkath/src/main/java/net/runelite/client/plugins/vorkath/VorkathPlugin.java
 	*/
 
