@@ -986,7 +986,13 @@ public class VorkathPlayerPlugin extends iScript {
 
 		Collections.reverse(loot);
 
-		if(!loot.isEmpty()) return loot.get(0);
+		if(!loot.isEmpty()){
+			if(onlyContainsBones(loot)){
+				Collections.sort(loot, Comparator.comparingInt(o -> (int) o.position().distanceTo(client.getLocalPlayer().getWorldLocation())));
+				return loot.get(0);
+			}
+			return loot.get(0);
+		}
 
 		return null;
 	}
@@ -996,6 +1002,12 @@ public class VorkathPlayerPlugin extends iScript {
 		return isAtVorkath() && vorkathAsleep != null;
 	}
 
+	public boolean onlyContainsBones(List<iGroundItem> bones){
+		for(iGroundItem i : bones){
+			if(i.id() != ItemID.SUPERIOR_DRAGON_BONES) return false;
+		}
+		return true;
+	}
 	public boolean isWakingUp(){
 		NPC vorkathWaking = npcUtils.findNearestNpc(NpcID.VORKATH_8058);
 		return isAtVorkath() && vorkathWaking != null;

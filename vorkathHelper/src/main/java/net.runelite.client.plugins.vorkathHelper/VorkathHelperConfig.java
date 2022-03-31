@@ -41,8 +41,8 @@ public interface VorkathHelperConfig extends Config
 
     @ConfigSection(
             keyName = "vorkathConfig",
-            name = "Vorkath helper config",
-            description = "Set up your helper",
+            name = "Vorkath assistant config",
+            description = "Set up your assistant",
             closedByDefault = true,
             position = 1)
     public static String vorkathConfig = "vorkathConfig";
@@ -215,7 +215,7 @@ public interface VorkathHelperConfig extends Config
     @ConfigItem(
             keyName = "acidFreePathMinLength",
             name = "Acid walk length",
-            description = "Minimum length of acid walk",
+            description = "Minimum length of acid walk. - Experimental",
             position = 4,
             section = "vorkathConfig")
     default int acidFreePathLength()
@@ -238,7 +238,7 @@ public interface VorkathHelperConfig extends Config
     @ConfigItem(
             keyName = "fastRetaliate",
             name = "Faster retaliate",
-            description = "Attacks Vorkath after moving/unfreezing faster/eating.",
+            description = "Attacks vorkath automatically.",
             position = 6,
             section = "vorkathConfig"
     )
@@ -262,10 +262,10 @@ public interface VorkathHelperConfig extends Config
 
     enum walkMethod {
         NONE(1),
-        WALK_ACID(2),
-        WOOX_ACID(3),
-        WOOX_ACID_CROSSBOW(4),
-        WOOX_ACID_BLOWPIPE(5);
+        WALK(2),
+        WOOX_MELEE(3),
+        WOOX_CROSSBOW(4),
+        WOOX_BLOWPIPE(5);
 
         @Getter
         private final int id;

@@ -38,25 +38,7 @@ public class CannonHelperPlugin extends iScript {
 	private Client client;
 
 	@Inject
-	private Chatbox chatbox;
-
-	@Inject
-	private PrayerUtils prayerUtils;
-
-	@Inject
-	private iUtils utils;
-
-	@Inject
 	private InventoryUtils invUtils;
-
-	@Inject
-	private NPCUtils npcUtils;
-
-	@Inject
-	private ObjectUtils objectUtils;
-
-	@Inject
-	private PlayerUtils playerUtils;
 
 	@Inject
 	private WalkUtils walkUtils;
@@ -67,7 +49,7 @@ public class CannonHelperPlugin extends iScript {
 	@Inject
 	private CalculationUtils calc;
 
-	private boolean startPlugin = false;
+	private boolean startPlugin;
 
 	private LocalPoint cannonLocation;
 	private LocalPoint safeSpot;
@@ -126,8 +108,8 @@ public class CannonHelperPlugin extends iScript {
 		}
 
 		if(cannon.name().equalsIgnoreCase("Broken multicannon")){
-				cannon.interact("Repair");
-				game.waitUntil(() -> !cannon.name().equalsIgnoreCase("Broken multicannon"), 10);
+			cannon.interact("Repair");
+			game.waitUntil(() -> !cannon.name().equalsIgnoreCase("Broken multicannon"), 10);
 		}else{
 			if(!isRunning()){
 				cannon.interact("Fire");

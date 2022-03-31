@@ -45,9 +45,6 @@ public class VorkathHelperPlugin extends iScript {
 	private Client client;
 
 	@Inject
-	private Chatbox chatbox;
-
-	@Inject
 	private PrayerUtils prayerUtils;
 
 	@Inject
@@ -84,7 +81,6 @@ public class VorkathHelperPlugin extends iScript {
 	private List<WorldPoint> safeMeleeTiles;
 	private boolean isAcid;
 	private boolean isMinion;
-	private boolean firstWalk;
 
 	private final Set<Integer> DIAMOND_SET = Set.of(ItemID.DIAMOND_DRAGON_BOLTS_E, ItemID.DIAMOND_BOLTS_E);
 	private final Set<Integer> RUBY_SET = Set.of(ItemID.RUBY_DRAGON_BOLTS_E, ItemID.RUBY_BOLTS_E);
@@ -93,10 +89,8 @@ public class VorkathHelperPlugin extends iScript {
 		acidSpots = new ArrayList<>();
 		acidFreePath = new ArrayList<>();
 		safeMeleeTiles = new ArrayList<>();
-		timeout = 0;
-		dodgeFirebomb = false;
 		fireBallPoint = null;
-		firstWalk = true;
+		safeTile = null;
 	}
 
 	@Provides
@@ -107,8 +101,6 @@ public class VorkathHelperPlugin extends iScript {
 	@Override
 	protected void startUp() {
 		log.info("Vorkath Helper startUp");
-		safeMeleeTiles.clear();
-		safeTile = null;
 	}
 
 	@Override
@@ -119,17 +111,23 @@ public class VorkathHelperPlugin extends iScript {
 	@Override
 	protected void onStart() {
 		log.info("Vorkath Helper started");
+		safeMeleeTiles.clear();
+		dodgeFirebomb = false;
+		timeout = 0;
 	}
 
 	@Override
 	protected void onStop() {
 		log.info("Vorkath Helper stopped");
-	}
-
-	@Override
-	protected void loop() {
-		if(client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null) return;
-
+		isAcid = false;
+		dodgeFirebomb = false;
+		isMinion = false;
+		safeTile = null;
+		fireBallPoint = null;
+		safeMeleeTiles.clear();
+		acidFreePath.clear();
+		acidSpots.clear();
+		timeout = 0;
 	}
 
 	@Subscribe
@@ -138,16 +136,13 @@ public class VorkathHelperPlugin extends iScript {
 
 		final Player player = client.getLocalPlayer();
 		final LocalPoint localLoc = player.getLocalLocation();
-		final WorldPoint worldLoc = player.getWorldLocation();
 
-		if(!isAtVorkath()){
-			safeMeleeTiles.clear();
-			return;
-		}
 		if(isVorkathAsleep() || !isAtVorkath()) {
+			safeMeleeTiles.clear();
 			isMinion = false;
 			isAcid = false;
 			dodgeFirebomb = false;
+			return;
 		}
 
 		if(!isAcid()){
@@ -162,14 +157,13 @@ public class VorkathHelperPlugin extends iScript {
 		createSafetiles();
 
 		log.info(String.valueOf(getState()));
-
 		switch(getState()){
 
 			case TIMEOUT:
 				timeout--;
 				break;
 			case TOGGLE_RUN:
-				if(!playerUtils.isRunEnabled()) playerUtils.enableRun(runOrb.getBounds());
+				playerUtils.enableRun(runOrb.getBounds());
 				break;
 			case DODGE_BOMB:
 				LocalPoint bomb = LocalPoint.fromWorld(client, fireBallPoint);
@@ -193,15 +187,16 @@ public class VorkathHelperPlugin extends iScript {
 				} else {
 					walkUtils.sceneWalk(dodgeLeft, 0, sleepDelay());
 				}
+
 				break;
 			case KILL_MINION:
 				NPC iceMinion = npcUtils.findNearestNpc(NpcID.ZOMBIFIED_SPAWN_8063);
 
-				if(player.getInteracting() != null && player.getInteracting().getName().equalsIgnoreCase("Vorkath")){
+				if(player.getInteracting() != null && player.getInteracting().getName().equalsIgnoreCase("Vorkath")){ //Stops attacking vorkath
 					walkUtils.sceneWalk(localLoc, 0, sleepDelay());
 					return;
 				}
-				if(prayerUtils.isQuickPrayerActive() && config.enablePrayer()){
+				if(prayerUtils.isQuickPrayerActive() && config.enablePrayer()){ //Turns pray off during this phase *Could probably rearrange getState to have it toggle prayer off there, will change up later.
 					prayerUtils.toggleQuickPrayer(false, sleepDelay());
 					return;
 				}
@@ -249,11 +244,6 @@ public class VorkathHelperPlugin extends iScript {
 						log.info("Last Tile: " + lastTile);
 						log.info("Actual length: " + (firstTile.getX() != lastTile.getX() ? Math.abs(firstTile.getX() - lastTile.getX()) : Math.abs(firstTile.getY() - lastTile.getY())));
 
-						/*if(playerUtils.isRunEnabled() && !player.getWorldLocation().equals(firstTile) && !player.getWorldLocation().equals(lastTile) && player.isMoving()){
-							playerUtils.enableRun(runOrb.getBounds());
-						}
-
-						 */
 						if(acidFreePath.contains(player.getWorldLocation())){
 							if(player.getWorldLocation().equals(firstTile)){
 								walkUtils.sceneWalk(lastTile, 0, sleepDelay());
@@ -297,10 +287,10 @@ public class VorkathHelperPlugin extends iScript {
 
 				break;
 			case SWITCH_RUBY:
-				equipRuby();
+				wearItem(getWidgetItem(RUBY_SET), MenuAction.ITEM_SECOND_OPTION);
 				break;
 			case SWITCH_DIAMOND:
-				equipDiamond();
+				wearItem(getWidgetItem(DIAMOND_SET), MenuAction.ITEM_SECOND_OPTION);
 				break;
 			case RETALIATE:
 				attackVorkath();
@@ -315,57 +305,52 @@ public class VorkathHelperPlugin extends iScript {
 		}
 	}
 
-	@Subscribe
-	private void onNpcSpawned(NpcSpawned event) {
-
-	}
-
-	@Subscribe
-	private void onNpcDespawned(NpcDespawned event) {
-		final NPC npc = event.getNpc();
-
-		if (npc.getName() == null) return;
+	@Override
+	protected void loop() {
 
 	}
 
 	@Subscribe
 	private void onAnimationChanged(AnimationChanged event) {
-		if(client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null)
-			return;
+		if(client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null || !isAtVorkath()) return;
 
-		final WorldPoint worldLoc = client.getLocalPlayer().getWorldLocation();
-		final LocalPoint localLoc = LocalPoint.fromWorld(client, worldLoc);
-		final Actor actor = event.getActor();
-		final Player player = client.getLocalPlayer();
+		Player player = client.getLocalPlayer();
 
-		if(actor.getAnimation() == 7889 || actor.getAnimation() == 7891){ //Minion hit animation
+		WorldPoint playerWorldLocation = player.getWorldLocation();
+
+		LocalPoint playerLocalLocation = player.getLocalLocation();
+
+		Actor actor = event.getActor();
+
+		if(actor == null) return;
+
+		if(actor.getAnimation() == 7889 || actor.getAnimation() == 7891){ //Minion death + hit animation (which is when he technically dies)
 			isMinion = false;
+			return;
 		}
 
-		if(actor.getAnimation() == 7957 && actor.getName().equalsIgnoreCase("Vorkath")){
+		if(actor.getName().equalsIgnoreCase("Vorkath") && actor.getAnimation() == 7957) //Waits one tick during his acid animation for projectile paths to calculate.
 			timeout+=1;
-		}
+
 	}
 	@Subscribe
 	private void onProjectileSpawned(ProjectileSpawned event) {
-		if(client.getLocalPlayer() == null) return;
 
-		final Player player = client.getLocalPlayer();
+		if(client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null || !isAtVorkath()) return;
 
-		final Projectile projectile = event.getProjectile();
+		Player player = client.getLocalPlayer();
 
-		final WorldPoint loc = player.getWorldLocation();
+		Projectile projectile = event.getProjectile();
 
-		final LocalPoint localLoc = LocalPoint.fromWorld(client, loc);
+		WorldPoint playerWorldLocation = player.getWorldLocation();
 
 		if (projectile.getId() == VORKATH_BOMB_AOE && config.dodgeBomb()){
-			fireBallPoint = player.getWorldLocation();
+			fireBallPoint = playerWorldLocation;
 			dodgeFirebomb = true;
 		}
 
-		if (projectile.getId() == VORKATH_ICE) {
+		if (projectile.getId() == VORKATH_ICE)
 			isMinion = true;
-		}
 
 		if(projectile.getId() == 1483)
 			isAcid = true;
@@ -373,19 +358,16 @@ public class VorkathHelperPlugin extends iScript {
 	}
 
 	@Subscribe
-	private void onProjectileMoved(final ProjectileMoved event) {
+	private void onProjectileMoved(ProjectileMoved event) {
 		Projectile projectile = event.getProjectile();
-		LocalPoint position = event.getPosition();
-		WorldPoint.fromLocal(
-				client,
-				position);
-		if(client.getLocalPlayer() != null) {
-			LocalPoint fromWorld = LocalPoint.fromWorld(client, client.getLocalPlayer().getWorldLocation());
+		WorldPoint position = WorldPoint.fromLocal(client, event.getPosition());
 
-			if (projectile.getId() == 1483) {
-				addAcidSpot(WorldPoint.fromLocal(client, position));
-			}
+		if(client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null || !isAtVorkath()) return;
+
+		if (projectile.getId() == 1483) {
+			addAcidSpot(position);
 		}
+
 	}
 
 	private VorkathStates getState(){
@@ -416,10 +398,10 @@ public class VorkathHelperPlugin extends iScript {
 		if(config.switchBolts() && vorkathAlive != null && !vorkathAlive.isDead()
 				&& playerUtils.isItemEquipped(RUBY_SET)
 				&& invUtils.containsItem(DIAMOND_SET)
+				&& calculateHealth(vorkathAlive) > 0
 				&& calculateHealth(vorkathAlive) < 260
 				&& vorkathAlive.getAnimation() != 7960
-				&& vorkathAlive.getAnimation() != 7957
-				&& calculateHealth(vorkathAlive) > 0)
+				&& vorkathAlive.getAnimation() != 7957)
 			return VorkathStates.SWITCH_DIAMOND;
 
 		if(config.enablePrayer() && isAtVorkath() && prayerUtils.isQuickPrayerActive()
@@ -442,7 +424,7 @@ public class VorkathHelperPlugin extends iScript {
 				&& !isMinion
 				&& !dodgeFirebomb
 				&& !isAcid
-				&& !isWakingUp())
+				&& !isWakingUp()) // No idea why this check is here given alive / asleep are two different ids lol
 			return VorkathStates.RETALIATE;
 
 		return VorkathStates.DEFAULT;
@@ -453,14 +435,9 @@ public class VorkathHelperPlugin extends iScript {
 		return sleepLength;
 	}
 
-	private int tickDelay() {
-		int tickLength = (int) calc.randomDelay(config.tickDelayWeightedDistribution(), config.tickDelayMin(), config.tickDelayMax(), config.tickDelayDeviation(), config.tickDelayTarget());
-		return tickLength;
-	}
-
 	public void attackVorkath(){
 		NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
-		if(vorkath != null && (vorkath.getAnimation() != 7957 || vorkath.getAnimation() == 7949 || vorkath.isDead())) //Acid animation check
+		if(vorkath != null && vorkath.getAnimation() != 7957 && (vorkath.getAnimation() != 7949 || !vorkath.isDead())) //Acid animation check
 			utils.doNpcActionMsTime(vorkath, MenuAction.NPC_SECOND_OPTION.getId(), sleepDelay());
 	}
 
@@ -468,20 +445,23 @@ public class VorkathHelperPlugin extends iScript {
 		NPC iceMinion = npcUtils.findNearestNpc(NpcID.ZOMBIFIED_SPAWN_8063);
 		if(iceMinion != null && !iceMinion.isDead()) {
 			LegacyMenuEntry entry = new LegacyMenuEntry("Cast", "", iceMinion.getIndex(), MenuAction.SPELL_CAST_ON_NPC.getId(), 0, 0, false);
-			utils.oneClickCastSpell(WidgetInfo.SPELL_CRUMBLE_UNDEAD, entry, iceMinion.getConvexHull().getBounds(), 0);
+			utils.oneClickCastSpell(WidgetInfo.SPELL_CRUMBLE_UNDEAD, entry, iceMinion.getConvexHull().getBounds(), sleepDelay());
 		}
 	}
 
 	/*
 	This method creates an initial row of tiles depending on the walk method.
-	If the user uses the regular woox walk, it will create a row directly in front of vorkath which is then used to create a secondary walk tile behind
+	If the user uses the melee woox walk, it will create a row directly in front of vorkath which is then used to create a secondary walk tile behind
 	If the user uses the ranged woox walk, it will create a row at the entrance of the instance that will then be used to create a secondary walk tile in front
+	Blowpipe walk does the above, but 2 tiles in front due to the range of the weapon.
 	 */
 	public void createSafetiles(){
 		if(isAtVorkath()){
 			if(safeMeleeTiles.size() > 8) safeMeleeTiles.clear();
+
 			LocalPoint southWest = config.walkMethod().getId() == 3 ? new LocalPoint(5824, 7872) : config.walkMethod().getId() == 4 ? new LocalPoint(5824, 7104) : new LocalPoint(5824, 7360);
 			WorldPoint base = WorldPoint.fromLocal(client, southWest);
+
 			for(int i = 0; i < 7; i++){
 				safeMeleeTiles.add(new WorldPoint(base.getX() + i, base.getY(), base.getPlane()));
 			}
@@ -502,13 +482,19 @@ public class VorkathHelperPlugin extends iScript {
 
 	public boolean isWakingUp(){
 		NPC vorkathWaking = npcUtils.findNearestNpc(NpcID.VORKATH_8058);
-		return isAtVorkath() && vorkathWaking != null;
+		return vorkathWaking != null;
 	}
 
 	private void addAcidSpot(WorldPoint worldPoint) {
 		if (!acidSpots.contains(worldPoint))
 			acidSpots.add(worldPoint);
 	}
+
+	/*
+	Taken from xKylees vorkath plugin with consent provided
+	https://github.com/xKylee/plugins-source/blob/master/vorkath/src/main/java/net/runelite/client/plugins/vorkath/VorkathPlugin.java
+	*/
+
 	private void calculateAcidFreePath()
 	{
 		acidFreePath.clear();
@@ -533,7 +519,7 @@ public class VorkathHelperPlugin extends iScript {
 		List<WorldPoint> bestPath = new ArrayList<>();
 		double bestClicksRequired = 99;
 
-		final WorldPoint playerLoc = client.getLocalPlayer().getWorldLocation();
+		final WorldPoint playerLoc = player.getWorldLocation();
 		final WorldPoint vorkLoc = vorkath.getWorldLocation();
 		final int maxX = vorkLoc.getX() + 14;
 		final int minX = vorkLoc.getX() - 8;
@@ -617,103 +603,27 @@ public class VorkathHelperPlugin extends iScript {
 			acidFreePath = bestPath;
 		}
 	}
-	/*Iprivate void calculateAcidFreePath(int size) {
 
-		Player player = client.getLocalPlayer();
-		NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
-
-		if(player == null || vorkath == null) return;
-
-		int[][][] array = { { { 0, 1 }, { 0, -1 } }, { { 1, 0 }, { -1, 0 } } };
-		ArrayList<WorldPoint> bestPath = new ArrayList<>();
-		double bestClicksRequired = 99.0D;
-
-		WorldPoint worldLocation = player.getWorldLocation();
-		WorldPoint worldLocation2 = vorkath.getWorldLocation();
-
-		int n2 = worldLocation2.getX() + 14;
-		int n3 = worldLocation2.getX() - 8;
-		int n4 = worldLocation2.getY() - 1;
-		int n5 = worldLocation2.getY() - 8;
-		for (int i = -1; i < 2; i++) {
-			for (int j = -1; j < 2; j++) {
-				WorldPoint worldPoint = new WorldPoint(
-						worldLocation.getX() + i,
-						worldLocation.getY() + j,
-						worldLocation.getPlane());
-				if (!acidSpots.contains(worldPoint)
-						&& worldPoint.getY() >= n5
-						&& worldPoint.getY() <= n4)
-					for (int l = 0; l < 2; l++) {
-						double clicksRequired;
-						if ((clicksRequired = (Math.abs(i) + Math.abs(j))) < 2.0D)
-							clicksRequired += (Math.abs(j * array[l][0][0]) + Math.abs(i * array[l][0][1]));
-						if (l == 0)
-							clicksRequired += 0.5D;
-						ArrayList<WorldPoint> currentPath;
-						(currentPath = new ArrayList<>()).add(worldPoint);
-						for (int n7 = 1; n7 < 25; n7++) {
-							WorldPoint worldPoint2 = new WorldPoint(
-									worldPoint.getX() + n7 * array[l][0][0],
-									worldPoint.getY() + n7 * array[l][0][1],
-									worldPoint.getPlane());
-
-							if (acidSpots.contains(worldPoint2)
-									|| worldPoint2.getY() < n5
-									|| worldPoint2.getY() > n4
-									|| worldPoint2.getX() < n3
-									|| worldPoint2.getX() > n2)
-								break;
-							currentPath.add(worldPoint2);
-						}
-						for (int n8 = 1; n8 < 25; n8++) {
-							WorldPoint worldPoint3 = new WorldPoint(
-									worldPoint.getX() + n8 * array[l][1][0],
-									worldPoint.getY() + n8 * array[l][1][1],
-									worldPoint.getPlane());
-
-							if (acidSpots.contains(worldPoint3)
-									|| worldPoint3.getY() < n5
-									|| worldPoint3.getY() > n4
-									|| worldPoint3.getX() < n3
-									|| worldPoint3.getX() > n2)
-								break;
-							currentPath.add(worldPoint3);
-						}
-
-						if ((currentPath.size() >= size && clicksRequired <= bestClicksRequired)
-								|| (clicksRequired == bestClicksRequired && currentPath.size() > bestPath.size())) {
-							bestPath = currentPath;
-							bestClicksRequired = clicksRequired;
-						}
-					}
-			}
-		}
-
-		if (bestClicksRequired != 99.0D)
-			acidFreePath = bestPath;
+	public boolean isItemEquipped(int id){
+		return game.equipment().withId(id).exists();
 	}
 
-	 */
-
-	public void equipDiamond() {
-		if (!playerUtils.isItemEquipped(DIAMOND_SET) && invUtils.containsItem(DIAMOND_SET)) {
-
-			WidgetItem diamondBolts = invUtils.getWidgetItem(DIAMOND_SET);
-
-			if (diamondBolts != null)
-				utils.doItemActionMsTime(diamondBolts, MenuAction.ITEM_SECOND_OPTION.getId(), 9764864, sleepDelay());
+	private WidgetItem getWidgetItem(Collection c){
+		if(invUtils.containsItem(c)){
+			return invUtils.getWidgetItem(c);
 		}
+		return null;
 	}
 
-	public void equipRuby() {
-		if (!playerUtils.isItemEquipped(RUBY_SET) && invUtils.containsItem(RUBY_SET)) {
+	public void wearItem(WidgetItem item, MenuAction action){
+		if (item != null && isItemEquipped(item.getId()) && invUtils.containsItem(item.getId()))
+				utils.doItemActionMsTime(item, action.getId(), 9764864, sleepDelay());
+	}
 
-			WidgetItem rubyBolts = invUtils.getWidgetItem(RUBY_SET);
-
-			if (rubyBolts != null)
-				utils.doItemActionMsTime(rubyBolts, MenuAction.ITEM_SECOND_OPTION.getId(), 9764864, sleepDelay());
-
+	private void useItem(WidgetItem item, MenuAction action) {
+		if (item != null) {
+			LegacyMenuEntry targetMenu = new LegacyMenuEntry("", "", item.getId(), action, item.getIndex(), WidgetInfo.INVENTORY.getId(), false);
+			utils.doActionMsTime(targetMenu, item.getCanvasBounds(), 0);
 		}
 	}
 
@@ -741,4 +651,5 @@ public class VorkathHelperPlugin extends iScript {
 		NPC vorkath = npcUtils.findNearestNpc(NpcID.VORKATH_8061);
 		return pool != null || (vorkath != null && vorkath.getAnimation() == 7957);
 	}
+
 }
